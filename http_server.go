@@ -3,7 +3,6 @@ package phttp
 import (
     "fmt"
     "sync"
-    //"errors"
 
     "net/http"
 )

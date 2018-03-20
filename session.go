@@ -9,8 +9,6 @@ import (
     "encoding/hex"
     "net/http"
     "net/url"
-
-    "base/log"
 )
 
 const (
@@ -118,16 +116,13 @@ func (sm *SessionMgr) SessionAttach(w http.ResponseWriter, r *http.Request) (*Se
     if err != nil {
         return nil, err
     }
-    log.Debug("SessionAttach: sid <%v>", sid)
     //sm.lock.RLock()
     if element, ok := sm.Sessions[sid]; ok {
         //sm.lock.RUnlock()
-        log.Debug("session exist")
         go sm.update(sid)
         return element.Value.(*SessionStore), nil
     }
 
-    log.Debug("session not exist, try create one")
     sid, err = sm.newSessionID()
     if err != nil {
         return nil, err
@@ -142,7 +137,6 @@ func (sm *SessionMgr) SessionAttach(w http.ResponseWriter, r *http.Request) (*Se
     //sid写入cookie，后面客户端的请求会自动带上这个字段
     sm.writeSid(w, sid)
 
-    log.Debug("create session %v", sid)
     return session, nil
 }
 
@@ -170,7 +164,6 @@ func (sm *SessionMgr) doGC() {
         sm.lock.RUnlock()
         if element != nil {
             if time.Now().After(element.Value.(*SessionStore).Expire()) {
-                log.Debug("gc session %+v", element.Value.(*SessionStore))
                 sm.lock.Lock()
                 sm.List.Remove(element)
                 delete(sm.Sessions, element.Value.(*SessionStore).SessionID())

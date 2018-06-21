@@ -21,7 +21,7 @@ func New(addr string) *HTTPWorker {
     return w
 }
 
-func (w *HTTPWorker) Serve(done chan struct{}, wg *sync.WaitGroup) {
+func (w *HTTPWorker) Serve(done <-chan struct{}, wg *sync.WaitGroup) {
     defer wg.Done()
 
     w.mergeRoute()

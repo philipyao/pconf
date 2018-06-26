@@ -2,9 +2,12 @@ package phttp
 
 import (
     "fmt"
-    "sync"
-
     "net/http"
+    "context"
+    "time"
+)
+const (
+    defaultShutdownInterval         = 3
 )
 
 type HTTPWorker struct {
@@ -21,9 +24,7 @@ func New(addr string) *HTTPWorker {
     return w
 }
 
-func (w *HTTPWorker) Serve(done <-chan struct{}, wg *sync.WaitGroup) {
-    defer wg.Done()
-
+func (w *HTTPWorker) Serve() error {
     w.mergeRoute()
 
     w.srv = &http.Server{
@@ -49,11 +50,15 @@ func (w *HTTPWorker) Serve(done <-chan struct{}, wg *sync.WaitGroup) {
         }
     }()
 
-    <- done
+    return nil
+}
+
+func (w *HTTPWorker) Close() {
     if w.logFunc != nil {
         w.logFunc("[http] stop listening on %v.", w.srv.Addr)
     }
-    w.srv.Shutdown(nil)
+    ctx, _ := context.WithTimeout(context.Background(), defaultShutdownInterval * time.Second)
+    w.srv.Shutdown(ctx)
 }
 
 func (w *HTTPWorker) SetLog(l func(format string, args ...interface{})) {

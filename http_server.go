@@ -1,14 +1,28 @@
 package phttp
 
 import (
-    "fmt"
     "net/http"
     "context"
     "time"
+    "net"
 )
 const (
     defaultShutdownInterval         = 3
 )
+
+type tcpKeepAliveListener struct {
+    *net.TCPListener
+}
+
+func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+    tc, err := ln.AcceptTCP()
+    if err != nil {
+        return
+    }
+    tc.SetKeepAlive(true)
+    tc.SetKeepAlivePeriod(3 * time.Minute)
+    return tc, nil
+}
 
 type HTTPWorker struct {
     addr        string
@@ -37,18 +51,12 @@ func (w *HTTPWorker) Serve() error {
     if w.logFunc != nil {
         w.logFunc("[http] start listening on %v.", w.srv.Addr)
     }
+    ln, err := net.Listen("tcp", w.srv.Addr)
+    if err != nil {
+        return err
+    }
 
-    go func() {
-        if err := w.srv.ListenAndServe(); err != nil {
-            if err != http.ErrServerClosed {
-                if w.logFunc != nil {
-                    w.logFunc("[http] ListenAndServe() error %v.", err)
-                } else {
-                    fmt.Printf("Httpserver: ListenAndServe() error: %s\n", err.Error())
-                }
-            }
-        }
-    }()
+    go w.srv.Serve(tcpKeepAliveListener{ln.(*net.TCPListener)})
 
     return nil
 }
